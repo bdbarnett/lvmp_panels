@@ -19,5 +19,3 @@ panels.add_styles_to_children(enc)
 
 p = panels.TabViewLivePanel(params=menu, parent=lv.scr_act(), idm=idm, root=True)
 tv_enc = EncoderDisplay(group=p.group, title="Tabview Encoder")
-# kp = panels.KeypadDisplay(target_group=p.group)
-
