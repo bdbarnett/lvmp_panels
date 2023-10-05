@@ -2,12 +2,15 @@
 Panels is a framework to aid in rapid creation of GUIs using LVGL on Micropython.
 Check out the [screenshots](assets/README.md).
 
+Specific details will be in the wiki soon...
+
 ## Goals
-The goal of Panels is to provide a framework to allow quickly creating GUIs in [lv_micropython](https://github.com/lvgl/lv_micropython), freeing up resources to focus on the other aspects of a project.
-- Must work on small round displays, which can be challenging since things like a title bar, status bar and "window controls" aren't visible on a round screen.
-- Must work with both touchscreens and non-touchscreens alike, utilizing LVGL's indev (input device) interfaces for rotary encoders and keypads.
-- Must be easy to apply styles to maintain a consistent look and feel.
-- Must provide a polished look and feel without relying on graphics.
+The goal of Panels is to provide a framework to allow quickly creating GUIs in [lv_micropython](https://github.com/lvgl/lv_micropython), freeing up resources to focus on the other aspects of a project.  It should:
+- work on small round displays, which can be challenging since things like a title bar, status bar and "window controls" aren't visible on a round screen,
+- work with both touchscreens and non-touchscreens alike, utilizing LVGL's indev (input device) interfaces for rotary encoders and keypads,
+- be easy to apply styles to maintain a consistent look and feel,
+- provide a polished look and feel without relying on graphics,
+- incorporate optional animations when moving between panels, again for a polished look.
 
 ### A Quick Example
 ```
