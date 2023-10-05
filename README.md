@@ -1,12 +1,13 @@
 # lvmp_panels
-Panels is a framework to aid in rapid creation of GUIs using LVGL on Micropython
+Panels is a framework to aid in rapid creation of GUIs using LVGL on Micropython.
+Check out the [screenshots](assets/README.md).
 
 ## Goals
-The goal of Panels is to provide a framework to allow quickly creating GUIs, freeing up resources to focus on the other aspects of a project.
-- Must work with small round displays, which can be challenging to fit since things like a title bar, status bar, and "window controls" aren't visible on a round screen
-- Must work with both touchscreens and non-touchscreens alike, utilizing LVGL's indev (input device) interfaces for rotary encoders and keypads
-- Must be easy to apply styles to maintain a consistent look and feel
-- Must provide a polished look and feel without relying on graphics
+The goal of Panels is to provide a framework to allow quickly creating GUIs in [lv_micropython](https://github.com/lvgl/lv_micropython), freeing up resources to focus on the other aspects of a project.
+- Must work on small round displays, which can be challenging since things like a title bar, status bar and "window controls" aren't visible on a round screen.
+- Must work with both touchscreens and non-touchscreens alike, utilizing LVGL's indev (input device) interfaces for rotary encoders and keypads.
+- Must be easy to apply styles to maintain a consistent look and feel.
+- Must provide a polished look and feel without relying on graphics.
 
 ### A Quick Example
 ```
@@ -18,13 +19,13 @@ panel = panels.AnalogClockPanel(parent=lv.scr_act(), root=True)
 ![AnalogClockPanel.png](assets/AnalogClockPanel.png)
 
 ## Recommended hardware
-Panels is designed to work on any display with 240x240 resolution or greater.  It is recommended to have external PSRAM in addition to the microcontroller's RAM, such as an ESP32-S3 with additional PSRAM, but should work fine on devices with 256KB RAM or more.  It is not recommended to use a device with only 128KB RAM, such as the Raspberry Pi Pico, but it should work for small displays with only a panel or two on Pico.  Storage requirements are negligible, with the exception of the binaries you provide.  That is to say, any device capable of running LVGL Micropython should have enough storage to house the framework.  The only storage requirement is the space for your assets, like icons and graphics.  It is possible, and a goal of Panels, to create GUIs that don't use any external graphics.
+Panels is designed to work on any display with 240x240 resolution or greater.  It is recommended to have external PSRAM in addition to the microcontroller's RAM, such as most ESP32-S3 boards, but should work fine on devices with 256KB RAM or more.  Development is done on Windows Subsystem for Linux using the Unix port of lv_micropython.  It is not recommended to use a device with only 128KB RAM, such as the Raspberry Pi Pico, but it may work for small displays with only a panel or two on Pico.  Storage requirements are negligible, with the exception of space for the binaries provided by you.  That is to say, any device capable of running LVGL Micropython should have enough storage to house the framework.  It is possible, and a goal of Panels, to create GUIs that don't use any external graphics.
 
 ## Uses
 Panels may be used in any microcontroller project that supports Micropython with LVGL bindings and has drivers for the display.  Touchscreen drivers are very beneficial, but not required if using an encoder or keypad.  Example use cases are watches, clocks, CNC machine controls, thermostats, vehicle instrumentation, digital musical instruments, and much more.  Multiple panels can be used per display, and multiple displays may be used if the hardware supports them.
 
 ## Dependencies
-While creating Panels, I realized many of the clases and functions needed could also be used in other LVGL Micropython projects that don't use Panels.  When possible, these classes and functions were moved outside of Panels into the projects below.
+While creating Panels, I realized many of the classes and functions needed could also be used in other LVGL Micropython projects that don't use Panels.  When possible, these classes and functions were moved outside of Panels into the projects below.
 - [lvmp_tools](https://github.com/bdbarnett/lvmp_tools): A collection of modules providing functions related to a particular idea.  Several of these were used by the writer to aid in troubleshooting, discovery and learning during the process of creating Panels, such as `flags.py`, `parts.py` and `states.py`.  Others provide functionality that will be useful in many scenarios, such as `ImageCache` in `images.py`, `default_event_cb` callback in `events.py` and `IndevManager` in `indevs.py`.
 - [lvmp_styles](https://github.com/bdbarnett/lvmp_styles): Provides a single function, `apply_styles`, and a mechanism for applying styles selectively or automatically.  Styles is not meant to replace themes in LVGL, but is meant to provide a different means for defining and applying styles.
 - [lvmp_encoders](https://github.com/bdbarnett/lvmp_encoders): Classes that provide drivers for hardware encoders, a widget to emulate an encoder and a display object containing the widget for unix to make it easier to design and troubleshoot interfaces that use encoders without having a physical encoder.
