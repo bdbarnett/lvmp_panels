@@ -17,3 +17,5 @@
 ![TextAreaPanel.png](TextAreaPanel.png)
 ![TransportMenu.png](TransportMenu.png)
 ![VolumeMenu.png](VolumeMenu.png)
+![TabViewLivePanel.png](TabViewLivePanel.png)
+![QuadDemo](QuadDemo.png)
