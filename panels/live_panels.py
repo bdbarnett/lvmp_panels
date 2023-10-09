@@ -4,18 +4,19 @@
 
 import lvgl as lv
 import gc
-from . import _BasePanel, RoundMenuPanel, ZRoundMenuPanel, IndevManager, add_styles_to_children
-from .menu_panels import add_back_menu_item
+from . import _BasePanel, RoundMenuPanel, ZRoundMenuPanel, IndevManager, apply_styles
+from .menu_panels import add_close_menu_item
 from tools.custom_views import FlexFlowView
 from tools.focus_callbacks import pan_focus_cb
 
 
 class CircularLivePanel(RoundMenuPanel):
-    auto_add_back_btn = False
+    style_key = 0
+    auto_add_close_btn = False
+    auto_add_title = False
+    auto_add_children = False
     animation = None
     zoomed = True
-    style_key = 0
-    auto_add_children = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -24,7 +25,7 @@ class CircularLivePanel(RoundMenuPanel):
         if parent == None:
             parent = self.obj
         if func == ZRoundMenuPanel or func == CircularLivePanel:
-            print(f"Cannot place a {func} on a ZoomedLivePanel.  Changing to RoundMenuPanel.")
+            self.warn(f"Cannot place a {func} on a ZoomedLivePanel.  Changing to RoundMenuPanel.")
             func = RoundMenuPanel
         panel = func(
             params=params,
@@ -44,16 +45,17 @@ class CircularLivePanel(RoundMenuPanel):
 
 
 class HorizontalLivePanel(_BasePanel):
-    auto_add_back_btn = False
+    style_key = 0
+    auto_add_close_btn = False
     auto_add_title = False
-    flex_flow = lv.FLEX_FLOW.ROW
     auto_add_children = False
+    flex_flow = lv.FLEX_FLOW.ROW
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.menu_def = self.params.copy()
-        add_back_menu_item(self)
+        add_close_menu_item(self)
 
         self.obj_size = (lv.pct(100), lv.pct(100))
         self.update_layout()
@@ -65,12 +67,12 @@ class HorizontalLivePanel(_BasePanel):
 
         self.group.set_focus_cb(lambda g: pan_focus_cb(g, self.obj))
 
-        self.finalize()
+        self.post_config()
 
     def add_item(self, title, icon, func, params, callback, parent=None):
         if parent == None: parent = self.obj
         if func == ZRoundMenuPanel or func == CircularLivePanel:
-            print(f"Cannot place a {func} on a FlexFlowLivePanel.  Changing to RoundMenuPanel.")
+            self.warn(f"Cannot place a {func} on a FlexFlowLivePanel.  Changing to RoundMenuPanel.")
             func = RoundMenuPanel
         panel = func(
             params=params,
@@ -94,15 +96,15 @@ class VerticalLivePanel(HorizontalLivePanel):
 
 
 class TabViewLivePanel(_BasePanel):
-    auto_add_title = False
-    auto_add_back_btn = False
     style_key = 0
+    auto_add_title = False
+    auto_add_close_btn = False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.menu_def = self.params.copy()
-        add_back_menu_item(self)
+        add_close_menu_item(self)
 
         self.obj_size = (lv.pct(100), lv.pct(100))
         self.update_layout()
@@ -111,7 +113,7 @@ class TabViewLivePanel(_BasePanel):
         self.obj = obj = lv.tabview(self, lv.DIR.LEFT, menu_width)
 
         tab_btns = obj.get_tab_btns()  # The BtnMatrix containing the buttons
-        add_styles_to_children(tab_btns, include_self=True)
+        apply_styles(tab_btns, include_self=True)
         tab_btns.add_event(
             lambda e: self.subpanels[e.get_target_obj().get_selected_btn()].idm.peek(),
             lv.EVENT.VALUE_CHANGED,
@@ -127,7 +129,7 @@ class TabViewLivePanel(_BasePanel):
             tabs[i].set_style_pad_all(0, 0)
             self.subpanels[i].set_style_radius(0, 0)
 
-        self.finalize()
+        self.post_config()
 
         self.subpanels[0].idm.peek()
 

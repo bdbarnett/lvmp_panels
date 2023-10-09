@@ -4,10 +4,11 @@
 
 import lvgl as lv
 import time  # for AnalogClockPanel and CalendarPanel
-from . import add_styles_to_children, add_children_to_group
+from . import apply_styles, add_children_to_group
 from .base_panels import _BasePanel
 from tools.animations import Animation
 from tools.misc import make_square
+import sys
 
 
 class AnalogClockPanel(_BasePanel):
@@ -17,76 +18,82 @@ class AnalogClockPanel(_BasePanel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        start_time = self.params
-        HOUR, MIN, SEC = 0, 1, 2
+        use_anims = self.params
 
-        self.clock_res = (
-            6  # Resolution (number of "subticks" per tick), must be an integer > 0
-        )
-        scale = self.clock_res * 60  # "subticks" per cycle
+        HOUR, MIN, SEC = 0, 1, 2
+        
+        mult = 2 if sys.platform == "linux" else 1
+
+        # Resolution (number of ticks per second), must be an integer > 0
+        self.clock_res = (6)
+        self.scale = self.clock_res * 60  # ticks per cycle
 
         self.obj_size = None
         # Create the meter
         self.obj = meter = lv.meter(self)
-        self.obj.set_size(lv.pct(100), lv.pct(100))
+        self.obj.set_size(lv.pct(95), lv.pct(95))
         make_square(self.obj)
         self.obj.center()
 
         # Add the scales
         meter.set_scale_ticks(61, 1, 5, lv.palette_main(lv.PALETTE.GREY))
         meter.set_scale_major_ticks(5, 2, 10, lv.color_black(), -20)
-        meter.set_scale_range(0, scale, 360, 270)
-
-        # Create the indicators
-        indic_sec = lv.meter_indicator_t()
-        indic_min = lv.meter_indicator_t()
-        indic_hour = lv.meter_indicator_t()
+        meter.set_scale_range(0, self.scale, 360, 270)
 
         # Add a needle line indicator
-        indic_sec = meter.add_needle_line(1, lv.palette_main(lv.PALETTE.RED), -6)
-        indic_min = meter.add_needle_line(2, lv.color_black(), 0)
-        indic_hour = meter.add_needle_line(4, lv.color_black(), -20)
+        self.indic_sec = meter.add_needle_line(1, lv.palette_main(lv.PALETTE.RED), -6)
+        self.indic_min = meter.add_needle_line(2, lv.color_black(), 0)
+        self.indic_hour = meter.add_needle_line(4, lv.color_black(), -20)
 
         # Redraw the text labels
         meter.add_event(self.tick_label_event, lv.EVENT.DRAW_PART_BEGIN, None)
+        
+        if use_anims:
+            # Create animations
+            # Create an animation to set the seconds value
+            anim_sec = Animation(
+                self.indic_sec,
+                lambda a, v: meter.set_indicator_value(self.indic_sec, v % self.scale),
+                0,
+                self.scale - 1,
+                60_000 * mult,
+                repeat_cnt=lv.ANIM_REPEAT_INFINITE,
+                get_value_cb=lambda x: self.get_time()[SEC],
+            )
 
-        # Create an animation to set the seconds value
-        anim_sec = Animation(
-            indic_sec,
-            lambda a, v: meter.set_indicator_value(indic_sec, v % scale),
-            0,
-            scale - 1,
-            120_000,
-            repeat_cnt=lv.ANIM_REPEAT_INFINITE,
-            get_value_cb=lambda x: self.format_time(start_time)[SEC],
-        )
+            # Create an animation to set the minutes value
+            anim_min = Animation(
+                self.indic_min,
+                lambda a, v: meter.set_indicator_value(self.indic_min, v % self.scale),
+                0,
+                self.scale - 1,
+                3_600_000 * mult,
+                repeat_cnt=lv.ANIM_REPEAT_INFINITE,
+                get_value_cb=lambda x: self.get_time()[MIN],
+            )
 
-        # Create an animation to set the minutes value
-        anim_min = Animation(
-            indic_min,
-            lambda a, v: meter.set_indicator_value(indic_min, v % scale),
-            0,
-            scale - 1,
-            7_200_000,
-            repeat_cnt=lv.ANIM_REPEAT_INFINITE,
-            get_value_cb=lambda x: self.format_time(start_time)[MIN],
-        )
+            # Create an animation to set the hours value
+            anim_hour = Animation(
+                self.indic_hour,
+                lambda a, v: meter.set_indicator_value(self.indic_hour, v % self.scale),
+                0,
+                self.scale - 1,
+                43_200_000 * mult,
+                repeat_cnt=lv.ANIM_REPEAT_INFINITE,
+                get_value_cb=lambda x: self.get_time()[HOUR],
+            )
 
-        # Create an animation to set the hours value
-        anim_hour = Animation(
-            indic_hour,
-            lambda a, v: meter.set_indicator_value(indic_hour, v % scale),
-            0,
-            scale - 1,
-            86_400_000,
-            repeat_cnt=lv.ANIM_REPEAT_INFINITE,
-            get_value_cb=lambda x: self.format_time(start_time)[HOUR],
-        )
+            # Start the animations and save them in a self.animations to be deleted by .cleanup() in .close()
+            self.animations = [anim_hour.start(), anim_min.start(), anim_sec.start()]
+        else:
+            # Create a timer
+            timer = lv.timer_create_basic()
+            timer.set_period(1000 // self.clock_res)
+            timer.set_repeat_count(-1)
+            timer.set_cb(self.update_clock)
+            self.timers.append(timer)
 
-        # Start the animations and save them in a self.animations to be deleted by .__del__() in .go_back()
-        self.animations = [anim_hour.start(), anim_min.start(), anim_sec.start()]
-
-        self.finalize()
+        self.post_config()
 
     def tick_label_event(self, e):
         draw_part_dsc = e.get_draw_part_dsc()
@@ -109,15 +116,19 @@ class AnalogClockPanel(_BasePanel):
         else:
             draw_part_dsc.text = str(draw_part_dsc.id // 5)
 
-    def format_time(self, clock_time):
-        res = self.clock_res
-        if not clock_time: clock_time = time.localtime()[3:6]
+    def get_time(self):
+        clock_time = time.localtime()[3:6]
         hour, min, sec = clock_time
-        sec = (sec * res) % (res * 60)
-        min = ((min * res) + (sec / 60)) % (res * 60)
-        hour = ((hour * 5 * res) + (min / 12)) % (res * 60)
+        sec = (sec * self.clock_res) % (self.clock_res * 60)
+        min = ((min * self.clock_res) + (sec / 60)) % (self.clock_res * 60)
+        hour = ((hour * 5 * self.clock_res) + (min / 12)) % (self.clock_res * 60)
         return (int(hour), int(min), int(sec))
 
+    def update_clock(self, event):
+        hour, min, sec = self.get_time()
+        self.obj.set_indicator_value(self.indic_sec, sec % self.scale)
+        self.obj.set_indicator_value(self.indic_min, min % self.scale)
+        self.obj.set_indicator_value(self.indic_hour, hour % self.scale)
 
 class ArcPanel(_BasePanel):
     title_align = (lv.ALIGN.CENTER, 0, 0)
@@ -152,7 +163,7 @@ class ArcPanel(_BasePanel):
             None,
         )
 
-        self.finalize()
+        self.post_config()
 
     def value_changed_event_cb(self, e, obj, label, callback):
         txt = "{:d}".format(obj.get_value())
@@ -181,7 +192,7 @@ class BtnPanel(_BasePanel):
 
         obj.add_event(self.callback, lv.EVENT.SHORT_CLICKED, None)
 
-        self.finalize()
+        self.post_config()
 
 
 class BtnMatrixPanel(_BasePanel):
@@ -197,7 +208,7 @@ class BtnMatrixPanel(_BasePanel):
 
         obj.add_event(self.event_cb, lv.EVENT.VALUE_CHANGED, None)
 
-        self.finalize()
+        self.post_config()
 
     def event_cb(self, event):
         if type(self.callback) is list:
@@ -222,16 +233,16 @@ class CalendarPanel(_BasePanel):
         # obj.set_day_names(day_names)
         header=lv.calendar_header_arrow(obj)
         # header=lv.calendar_header_dropdown(obj)
-        add_styles_to_children(header)
+        apply_styles(header)
         cal_btns = obj.get_btnmatrix()
-        add_styles_to_children(cal_btns)
+        apply_styles(cal_btns)
         obj.clear_flag(obj.FLAG.CLICKABLE)
         self.group.add_obj(cal_btns)
         add_children_to_group(header, self.group)
 
         obj.add_event(self.value_changed_event_cb, lv.EVENT.VALUE_CHANGED, None)
 
-        self.finalize()
+        self.post_config()
 
     def value_changed_event_cb(self, e):
         obj = e.get_target_obj()
@@ -261,7 +272,7 @@ class ColorWheelPanel(_BasePanel):
 
         obj.add_event(self.callback, lv.EVENT.VALUE_CHANGED, None)
 
-        self.finalize()
+        self.post_config()
 
 
 class LabelPanel(_BasePanel):
@@ -291,7 +302,7 @@ class LabelPanel(_BasePanel):
             else:
                 obj.set_text(self.txt())
 
-        self.finalize()
+        self.post_config()
 
 
 class ListPanel(_BasePanel):
@@ -308,7 +319,7 @@ class ListPanel(_BasePanel):
             else:
                 self.add_item(*item)
 
-        self.finalize()
+        self.post_config()
 
     def add_item(self, title, icon, func):
         btn = self.obj.add_btn(icon, title)
@@ -335,7 +346,7 @@ class RollerPanel(_BasePanel):
 
         obj.add_event(self.callback, lv.EVENT.VALUE_CHANGED, None)
 
-        self.finalize()
+        self.post_config()
 
 
 class SliderPanel(_BasePanel):
@@ -362,7 +373,7 @@ class SliderPanel(_BasePanel):
         # Manually update the label for the first time
         self.value_changed_event_cb(None, obj, label, None)
 
-        self.finalize()
+        self.post_config()
 
     def value_changed_event_cb(self, e, obj, label, callback):
         txt = "{:d}".format(obj.get_value())
@@ -393,8 +404,8 @@ class TextAreaPanel(_BasePanel):
         else:
             self.source = param(obj)
 
-        self.finalize()
+        self.post_config()
 
-    def _del(self):
+    def cleanup(self):
         if self.source: self.source._del()
-        super()._del()
+        super().cleanup()

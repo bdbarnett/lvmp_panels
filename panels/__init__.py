@@ -3,8 +3,9 @@
 # SPDX-License-Identifier: MIT
 
 import lvgl as lv
-from styles import styles, add_styles, add_styles_to_children
+import styles
 from . import config
+apply_styles = config.apply_styles
 from tools.indevs import IndevManager, add_children_to_group
 from .base_panels import (
     _BasePanel,

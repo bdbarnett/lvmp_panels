@@ -45,11 +45,11 @@ class ListMenuPanel(ListPanel):
 
     def add_item(self, title, icon, func, params, callback):
         btn = self.obj.add_btn(icon, title)
-        btn.add_event(create_cb(self, title, icon, func, params, callback), lv.EVENT.SHORT_CLICKED, None)
+        btn.add_event(create_cb(self, title, icon, func, params, callback, btn), lv.EVENT.SHORT_CLICKED, None)
         self.group.add_obj(btn)
 
 class RoundMenuPanel(_BasePanel):
-    back_align = (lv.ALIGN.CENTER, 0, 0)
+    close_align = (lv.ALIGN.CENTER, 0, 0)
     title_align = (lv.ALIGN.TOP_LEFT, 0, 0)
     zoomed = False
 
@@ -58,7 +58,7 @@ class RoundMenuPanel(_BasePanel):
         if self.root: self.title_align = (lv.ALIGN.CENTER, 0, 0)
 
         self.menu_def = self.params.copy()
-        if self.zoomed: add_back_menu_item(self)
+        if self.zoomed: add_close_menu_item(self)
 
         self.obj_size = None
         self.obj = RoundView(self, len(self.menu_def), self.zoomed)
@@ -67,47 +67,56 @@ class RoundMenuPanel(_BasePanel):
             self.add_item(*item)
 
         if self.rotate:
-            self.group.set_focus_cb(lambda g: rotate_focus_cb(g, self.obj, exclude=[self.back_btn]))
+            self.group.set_focus_cb(lambda g: rotate_focus_cb(g, self.obj, exclude=[self.close_btn]))
         elif self.zoomed:
             self.group.set_focus_cb(lambda g: pan_focus_cb(g, self.obj, scroll_gp=True))
 
-        self.finalize()
+        self.post_config()
 
     def add_item(self, title, icon, func, params, callback):
         btn = self.obj.add_btn(icon, title)
-        btn.add_event(create_cb(self, title, icon, func, params, callback), lv.EVENT.SHORT_CLICKED, None)
+        btn.add_event(create_cb(self, title, icon, func, params, callback, btn), lv.EVENT.SHORT_CLICKED, None)
         self.group.add_obj(btn)
 
 class ZRoundMenuPanel(RoundMenuPanel):
-    auto_add_back_btn = False
+    style_key = 0
+    auto_add_close_btn = False
+    auto_add_title = False
     animation = None
     zoomed = True
-    style_key = 0
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def add_item(self, title, icon, func, params, callback):
+        btn = self.obj.add_btn(icon, title)
+        btn.add_event(create_cb(self, title, icon, func, params, callback, btn, self.obj.child_size),
+                       lv.EVENT.SHORT_CLICKED, None)
+        self.group.add_obj(btn)
+
+
 ###############################################################################################
 
-def add_back_menu_item(self):
+def add_close_menu_item(self):
     if not self.root:
         if type(self) == ZRoundMenuPanel:
-            self.menu_def.insert(0, ("Back", lv.SYMBOL.LEFT, self.go_back, None, None))
+            self.menu_def.insert(0, (self.close_btn_label, self.close_btn_icon, self.close, None, None))
         else:
-            self.menu_def.insert(0, ("Back", lv.SYMBOL.LEFT, BtnPanel, None, self.go_back))
+            self.menu_def.insert(0, (self.close_btn_label, self.close_btn_icon, BtnPanel, None, self.close))
 
-def create_cb(self, title, icon, func, params, callback):
+def create_cb(self, title, icon, func, params, callback, sender=None, size=None):
     if func == None: func = self.callback
+    
     return lambda e: func(
         e,
         title=title,
         icon=icon,
         params=params,
         callback=callback,
-        sender=e.get_target_obj(),
+        sender=sender if sender else self,
         parent=self,
         idm=self.idm,
-        size=self.size,
+        size=size if size else self.size,
         alignment=determine_pos(e, self)
     )
 
